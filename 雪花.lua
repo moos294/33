@@ -150,10 +150,13 @@ local function gradient(p, c1, c2, rot)
     g.Color = ColorSequence.new(c1, c2); g.Rotation = rot or 90; g.Parent = p; return g
 end
 
+-- ✅ FIXED: 原来 c[0]/c[1] 是错误索引，Lua 数组从 1 开始
 local function gradientMulti(p, list, rot)
     local g = Instance.new("UIGradient")
     local cs = {}
-    for _, c in ipairs(list) do table.insert(cs, ColorSequenceKeypoint.new(c[1], c[2])) end
+    for _, c in ipairs(list) do
+        table.insert(cs, ColorSequenceKeypoint.new(c[1], c[2]))
+    end
     g.Color = ColorSequence.new(cs)
     g.Rotation = rot or 90
     g.Parent = p
