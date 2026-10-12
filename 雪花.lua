@@ -4,6 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -13,6 +14,7 @@ local Config = {
     AutoRebirth = false, AutoRebirthDelay = 3, AntiAfk = true,
     AutoReset = false, AutoResetInterval = 300, SaveSettings = true,
     Notifications = true, MinimizeOnStart = false, TotalReps = 0,
+    Fly = false, FlySpeed = 50, WalkSpeed = 16,
 }
 
 local Actions = { "PushUp", "SitUp", "PullUp", "Squat" }
@@ -108,7 +110,10 @@ local trainCount, totalCount = 0, tonumber(Config.TotalReps) or 0
 local startTime, isCollapsed, savedSize = 0, false, nil
 local strengthSource, strengthAttr = nil, nil
 local sessionStartStrength = nil
+local flying, flyBV, flyBG = false, nil, nil
+local flySpeed = Config.FlySpeed or 50
 local startAutoTrain, stopAutoTrain, updateStatus, updateStartBtn, collapse, expand
+local startFly, stopFly, applyWalkSpeed
 
 local STRENGTH_NAMES = { "Strength", "Power", "Str", "StrengthValue", "力量", "TotalStrength", "CrownStrength" }
 
@@ -378,6 +383,104 @@ local function notify(text, color)
     end)
 end
 
+local function toggleRow(parent, labelText, key, onToggle)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 30)
+    row.BackgroundTransparency = 1
+    row.Parent = parent
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -60, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = labelText
+    lbl.TextColor3 = T.Text
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Font = T.FM
+    lbl.TextSize = 12
+    lbl.Parent = row
+
+    local switch = Instance.new("TextButton")
+    switch.Size = UDim2.new(0, 44, 0, 24)
+    switch.Position = UDim2.new(1, -44, 0.5, -12)
+    switch.BackgroundColor3 = Config[key] and T.Success or T.PanelAlt
+    switch.Text = ""
+    switch.AutoButtonColor = false
+    switch.BorderSizePixel = 0
+    switch.Parent = row
+    corner(switch, 12)
+    stroke(switch, T.Stroke, 1)
+
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.new(0, 18, 0, 18)
+    knob.Position = Config[key] and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.BorderSizePixel = 0
+    knob.Parent = switch
+    corner(knob, 9)
+
+    local function refresh()
+        local on = Config[key]
+        tween(switch, { BackgroundColor3 = on and T.Success or T.PanelAlt }, 0.15)
+        tween(knob, { Position = on and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9) }, 0.15)
+    end
+
+    switch.MouseButton1Click:Connect(function()
+        Config[key] = not Config[key]
+        if key == "AutoRebirth" and Config[key] and not RebirthEvent then
+            Config[key] = false
+            notify("未找到重生事件", T.Danger)
+        end
+        refresh()
+        if onToggle then onToggle(Config[key]) end
+        saveConfig()
+    end)
+end
+
+local function numberInput(parent, labelText, key, minV, maxV, onChange)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 30)
+    row.BackgroundTransparency = 1
+    row.Parent = parent
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0, 80, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = labelText
+    lbl.TextColor3 = T.TextDim
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Font = T.FM
+    lbl.TextSize = 12
+    lbl.Parent = row
+
+    local box = Instance.new("TextBox")
+    box.Size = UDim2.new(1, -80, 1, 0)
+    box.Position = UDim2.new(0, 80, 0, 0)
+    box.BackgroundColor3 = T.PanelAlt
+    box.Text = tostring(Config[key])
+    box.TextColor3 = T.Text
+    box.PlaceholderColor3 = T.TextDim
+    box.Font = T.FM
+    box.TextSize = 12
+    box.ClearTextOnFocus = false
+    box.BorderSizePixel = 0
+    box.Parent = row
+    corner(box, 7)
+    stroke(box, T.Stroke, 1)
+
+    box.FocusLost:Connect(function()
+        local n = tonumber(box.Text)
+        if n and n >= minV and n <= maxV then
+            box.Text = tostring(n)
+            Config[key] = n
+            if onChange then onChange(n) end
+            saveConfig()
+        else
+            box.Text = tostring(Config[key])
+            notify(string.format("需在 %d ~ %d 之间", minV, maxV), T.Danger)
+        end
+    end)
+end
+
 sectionTitle("力量数据")
 local powerCard = card(140)
 
@@ -536,65 +639,112 @@ end
 startBtn.MouseEnter:Connect(function() tween(startBtn, { BackgroundTransparency = 0.15 }, 0.15) end)
 startBtn.MouseLeave:Connect(function() tween(startBtn, { BackgroundTransparency = 0 }, 0.15) end)
 
+applyWalkSpeed = function()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.WalkSpeed = Config.WalkSpeed end
+end
+
+startFly = function()
+    if flying then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.PlatformStand = true end
+
+    flyBV = Instance.new("BodyVelocity")
+    flyBV.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    flyBV.Velocity = Vector3.zero
+    flyBV.Parent = hrp
+
+    flyBG = Instance.new("BodyGyro")
+    flyBG.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+    flyBG.P = 3000
+    flyBG.D = 500
+    flyBG.Parent = hrp
+
+    flying = true
+end
+
+stopFly = function()
+    if not flying then return end
+    flying = false
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = false end
+    end
+    if flyBV then flyBV:Destroy(); flyBV = nil end
+    if flyBG then flyBG:Destroy(); flyBG = nil end
+    applyWalkSpeed()
+end
+
+RunService.RenderStepped:Connect(function()
+    if not flying then return end
+    local char = LocalPlayer.Character
+    if not char then stopFly() return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp or not flyBV or not flyBG then return end
+
+    local cam = workspace.CurrentCamera
+    local dir = Vector3.zero
+
+    if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
+
+    if dir.Magnitude > 0 then dir = dir.Unit * flySpeed end
+    flyBV.Velocity = dir
+    flyBG.CFrame = CFrame.new(hrp.Position, hrp.Position + cam.CFrame.LookVector)
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    applyWalkSpeed()
+    if flying then
+        flying = false
+        if flyBV then flyBV:Destroy(); flyBV = nil end
+        if flyBG then flyBG:Destroy(); flyBG = nil end
+        if Config.Fly then startFly() end
+    end
+end)
+
 sectionTitle("自动化")
 local autoCard = card(172)
 
-local function toggleRow(labelText, key)
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 30)
-    row.BackgroundTransparency = 1
-    row.Parent = autoCard
+toggleRow(autoCard, "自动重生", "AutoRebirth")
+toggleRow(autoCard, "反挂机", "AntiAfk")
+toggleRow(autoCard, "自动重置角色", "AutoReset")
+toggleRow(autoCard, "通知提示", "Notifications")
 
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -60, 1, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = labelText
-    lbl.TextColor3 = T.Text
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Font = T.FM
-    lbl.TextSize = 12
-    lbl.Parent = row
+sectionTitle("移动")
+local moveCard = card(130)
 
-    local switch = Instance.new("TextButton")
-    switch.Size = UDim2.new(0, 44, 0, 24)
-    switch.Position = UDim2.new(1, -44, 0.5, -12)
-    switch.BackgroundColor3 = Config[key] and T.Success or T.PanelAlt
-    switch.Text = ""
-    switch.AutoButtonColor = false
-    switch.BorderSizePixel = 0
-    switch.Parent = row
-    corner(switch, 12)
-    stroke(switch, T.Stroke, 1)
-
-    local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 18, 0, 18)
-    knob.Position = Config[key] and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
-    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    knob.BorderSizePixel = 0
-    knob.Parent = switch
-    corner(knob, 9)
-
-    local function refresh()
-        local on = Config[key]
-        tween(switch, { BackgroundColor3 = on and T.Success or T.PanelAlt }, 0.15)
-        tween(knob, { Position = on and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9) }, 0.15)
+toggleRow(moveCard, "飞行模式", "Fly", function(on)
+    if on then
+        startFly()
+        notify("飞行已开启（空格上升 / 左Ctrl下降）", T.Info)
+    else
+        stopFly()
+        notify("飞行已关闭", T.Danger)
     end
+end)
 
-    switch.MouseButton1Click:Connect(function()
-        Config[key] = not Config[key]
-        if key == "AutoRebirth" and Config[key] and not RebirthEvent then
-            Config[key] = false
-            notify("未找到重生事件", T.Danger)
-        end
-        refresh()
-        saveConfig()
-    end)
-end
+numberInput(moveCard, "步行速度", "WalkSpeed", 16, 500, function(v)
+    Config.WalkSpeed = v
+    applyWalkSpeed()
+end)
 
-toggleRow("自动重生", "AutoRebirth")
-toggleRow("反挂机", "AntiAfk")
-toggleRow("自动重置角色", "AutoReset")
-toggleRow("通知提示", "Notifications")
+numberInput(moveCard, "飞行速度", "FlySpeed", 10, 500, function(v)
+    flySpeed = v
+end)
 
 sectionTitle("统计")
 local statCard = card(112)
@@ -899,6 +1049,7 @@ end
 
 CloseBtn.MouseButton1Click:Connect(function()
     stopAutoTrain()
+    stopFly()
     saveConfig()
     for _, c in ipairs(Connections) do pcall(function() c:Disconnect() end) end
     tween(Main, { Size = UDim2.new(0, W, 0, 0), BackgroundTransparency = 1 }, 0.25)
@@ -973,7 +1124,9 @@ task.spawn(function()
     while ScreenGui.Parent do
         task.wait(Config.AutoRebirthDelay)
         if Config.AutoRebirth and RebirthEvent then
-            pcall(function() RebirthEvent:FireServer() end)
+            pcall(function() RebirthEvent:FireServer("Start") end)
+            task.wait(0.5)
+            pcall(function() RebirthEvent:FireServer("Update") end)
         end
     end
 end)
@@ -1013,11 +1166,16 @@ end))
 updateStartBtn()
 updateStatus()
 refreshStrengthSource()
+applyWalkSpeed()
 
 if Config.AutoStart then
     startAutoTrain()
     updateStartBtn()
     updateStatus()
+end
+
+if Config.Fly then
+    task.defer(startFly)
 end
 
 if Config.MinimizeOnStart then
