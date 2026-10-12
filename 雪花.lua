@@ -819,5 +819,3 @@ if Config.MinimizeOnStart then
     Main.Size = UDim2.new(0, W, 0, 56)
     MinBtn.Text = "+"
 end
-
-notify("CrownStrength v2.1 loaded", Theme.Accent)
