@@ -33,6 +33,12 @@ local COLLAPSED = 44
 local IS_TOUCH = UserInputService.TouchEnabled
 local REBIRTH_TIMEOUT = 15
 
+-- ✅ 最小循环间隔，防止 task.wait(0) 死循环
+local MIN_LOOP_WAIT = 0.1
+local function safeWait(t)
+    task.wait(math.max(MIN_LOOP_WAIT, tonumber(t) or MIN_LOOP_WAIT))
+end
+
 local EGG_DEFS = {
     sky    = { name = "SkyPetEgg",    count = 5, currency = "Gem", label = "天空蛋" },
     lava   = { name = "LavaPetEgg",   count = 5, currency = "Gem", label = "岩浆蛋" },
@@ -78,6 +84,28 @@ local function loadConfig()
     end
 end
 loadConfig()
+
+-- ✅ 数值钳制：防止损坏的配置文件把整个脚本卡死
+local function clampConfig()
+    Config.Interval          = math.clamp(tonumber(Config.Interval)          or 0.1,  MIN_INTERVAL, MAX_INTERVAL)
+    Config.SkyEggInterval    = math.clamp(tonumber(Config.SkyEggInterval)    or 1,    0.1, 30)
+    Config.LavaEggInterval   = math.clamp(tonumber(Config.LavaEggInterval)   or 1,    0.1, 30)
+    Config.SandEggInterval   = math.clamp(tonumber(Config.SandEggInterval)   or 1,    0.1, 30)
+    Config.JungleEggInterval = math.clamp(tonumber(Config.JungleEggInterval) or 1,    0.1, 30)
+    Config.AutoRebirthDelay  = math.clamp(tonumber(Config.AutoRebirthDelay)  or 3,    0.5, 600)
+    Config.AutoResetInterval = math.clamp(tonumber(Config.AutoResetInterval) or 300,  10, 86400)
+    Config.WalkSpeed         = math.clamp(tonumber(Config.WalkSpeed)         or 16,   16, 500)
+    Config.FlySpeed          = math.clamp(tonumber(Config.FlySpeed)          or 50,   10, 500)
+    Config.EggMaxBackpack    = math.clamp(tonumber(Config.EggMaxBackpack)    or 256,  1, 99999)
+    Config.AutoRebirthCount  = math.clamp(tonumber(Config.AutoRebirthCount)  or 0,    0, 99999)
+    Config.AutoRebirthDone   = math.clamp(tonumber(Config.AutoRebirthDone)   or 0,    0, 99999)
+    Config.TotalReps         = math.max(0, tonumber(Config.TotalReps) or 0)
+    Config.SkyEggTotal       = math.max(0, tonumber(Config.SkyEggTotal) or 0)
+    Config.LavaEggTotal      = math.max(0, tonumber(Config.LavaEggTotal) or 0)
+    Config.SandEggTotal      = math.max(0, tonumber(Config.SandEggTotal) or 0)
+    Config.JungleEggTotal    = math.max(0, tonumber(Config.JungleEggTotal) or 0)
+end
+clampConfig()
 
 do
     local firstOn = nil
@@ -150,7 +178,7 @@ local function gradient(p, c1, c2, rot)
     g.Color = ColorSequence.new(c1, c2); g.Rotation = rot or 90; g.Parent = p; return g
 end
 
--- ✅ FIXED: 原来 c[0]/c[1] 是错误索引，Lua 数组从 1 开始
+-- ✅ 修复：Lua 数组下标从 1 开始（原来 c[0]/c[1] 是错的）
 local function gradientMulti(p, list, rot)
     local g = Instance.new("UIGradient")
     local cs = {}
@@ -544,7 +572,7 @@ local MinBtn = headerButton("◆", T.NeonDim, -52, T.Neon)
 local DataBtn = headerButton("▤", T.NeonDim, -76, T.Neon)
 
 local Content = Instance.new("ScrollingFrame")
-Content.Size = UDim2.new(1, 0, 1, -36 - 36)
+Content.Size = UDim2.new(1, 0, 1, -72)
 Content.Position = UDim2.new(0, 0, 0, 36)
 Content.BackgroundTransparency = 1
 Content.BorderSizePixel = 0
@@ -2318,7 +2346,7 @@ startAutoTrain = function()
                 totalCount = totalCount + 1
                 Config.TotalReps = totalCount
             end
-            task.wait(Config.Interval)
+            safeWait(Config.Interval)
         end
         if isTraining then isTraining = false end
     end)
@@ -2590,7 +2618,7 @@ end)
 
 task.spawn(function()
     while ScreenGui.Parent do
-        task.wait(Config.AutoRebirthDelay)
+        safeWait(Config.AutoRebirthDelay)
         if Config.AutoRebirth and RebirthEvent and not pendingRebirth then
             local target = Config.AutoRebirthCount
             local done = Config.AutoRebirthDone
@@ -2627,7 +2655,7 @@ end)
 
 task.spawn(function()
     while ScreenGui.Parent do
-        task.wait(Config.SkyEggInterval)
+        safeWait(Config.SkyEggInterval)
         if Config.SkyEggAuto and StoreEvent then
             if isBackpackFull() then
                 Config.SkyEggAuto = false
@@ -2650,7 +2678,7 @@ end)
 
 task.spawn(function()
     while ScreenGui.Parent do
-        task.wait(Config.LavaEggInterval)
+        safeWait(Config.LavaEggInterval)
         if Config.LavaEggAuto and StoreEvent then
             if isBackpackFull() then
                 Config.LavaEggAuto = false
@@ -2673,7 +2701,7 @@ end)
 
 task.spawn(function()
     while ScreenGui.Parent do
-        task.wait(Config.SandEggInterval)
+        safeWait(Config.SandEggInterval)
         if Config.SandEggAuto and StoreEvent then
             if isBackpackFull() then
                 Config.SandEggAuto = false
@@ -2696,7 +2724,7 @@ end)
 
 task.spawn(function()
     while ScreenGui.Parent do
-        task.wait(Config.JungleEggInterval)
+        safeWait(Config.JungleEggInterval)
         if Config.JungleEggAuto and StoreEvent then
             if isBackpackFull() then
                 Config.JungleEggAuto = false
@@ -2719,7 +2747,7 @@ end)
 
 task.spawn(function()
     while ScreenGui.Parent do
-        task.wait(Config.AutoResetInterval)
+        safeWait(Config.AutoResetInterval)
         if Config.AutoReset then
             pcall(function()
                 local char = LocalPlayer.Character
