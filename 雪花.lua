@@ -33,8 +33,8 @@ local COLLAPSED = 44
 local IS_TOUCH = UserInputService.TouchEnabled
 local REBIRTH_TIMEOUT = 15
 
--- ✅ 最小循环间隔，防止 task.wait(0) 死循环
-local MIN_LOOP_WAIT = 0.1
+-- ✅ FIX: 最小循环间隔改为 0.05，与 MIN_INTERVAL=0.08 保持一致
+local MIN_LOOP_WAIT = 0.05
 local function safeWait(t)
     task.wait(math.max(MIN_LOOP_WAIT, tonumber(t) or MIN_LOOP_WAIT))
 end
@@ -85,7 +85,6 @@ local function loadConfig()
 end
 loadConfig()
 
--- ✅ 数值钳制：防止损坏的配置文件把整个脚本卡死
 local function clampConfig()
     Config.Interval          = math.clamp(tonumber(Config.Interval)          or 0.1,  MIN_INTERVAL, MAX_INTERVAL)
     Config.SkyEggInterval    = math.clamp(tonumber(Config.SkyEggInterval)    or 1,    0.1, 30)
@@ -178,7 +177,6 @@ local function gradient(p, c1, c2, rot)
     g.Color = ColorSequence.new(c1, c2); g.Rotation = rot or 90; g.Parent = p; return g
 end
 
--- ✅ 修复：Lua 数组下标从 1 开始（原来 c[0]/c[1] 是错的）
 local function gradientMulti(p, list, rot)
     local g = Instance.new("UIGradient")
     local cs = {}
@@ -208,32 +206,35 @@ local function fmt(n)
     return out
 end
 
+-- ✅ FIX: 重写 cornerBrackets，4 个角的 8 条线段位置现在全部正确
 local function cornerBrackets(parent, color, size, thickness)
     color = color or T.Neon
     size = size or 8
     thickness = thickness or 2
-    local data = {
-        {0, 0, 1, 0, 0, 0}, {1, -size, 0, 0, 1, 0},
-        {0, 0, 0, 1, 0, 0}, {1, -size, 1, -size, 0, 1},
-    }
-    for _, d in ipairs(data) do
-        local h = Instance.new("Frame")
-        h.Size = UDim2.new(0, size, 0, thickness)
-        h.Position = UDim2.new(d[1], d[2], d[3], d[4])
-        h.BackgroundColor3 = color
-        h.BorderSizePixel = 0
-        h.ZIndex = 10
-        h.Parent = parent
+
+    local function makeFrame(pos, sz)
+        local f = Instance.new("Frame")
+        f.Position = pos
+        f.Size = sz
+        f.BackgroundColor3 = color
+        f.BorderSizePixel = 0
+        f.ZIndex = 10
+        f.Parent = parent
+        return f
     end
-    for _, d in ipairs(data) do
-        local v = Instance.new("Frame")
-        v.Size = UDim2.new(0, thickness, 0, size)
-        v.Position = UDim2.new(d[5], d[6], d[3], d[4])
-        v.BackgroundColor3 = color
-        v.BorderSizePixel = 0
-        v.ZIndex = 10
-        v.Parent = parent
-    end
+
+    -- 左上角
+    makeFrame(UDim2.new(0, 0, 0, 0),               UDim2.new(0, size, 0, thickness))
+    makeFrame(UDim2.new(0, 0, 0, 0),               UDim2.new(0, thickness, 0, size))
+    -- 右上角
+    makeFrame(UDim2.new(1, -size, 0, 0),           UDim2.new(0, size, 0, thickness))
+    makeFrame(UDim2.new(1, -thickness, 0, 0),      UDim2.new(0, thickness, 0, size))
+    -- 左下角
+    makeFrame(UDim2.new(0, 0, 1, -thickness),      UDim2.new(0, size, 0, thickness))
+    makeFrame(UDim2.new(0, 0, 1, -size),           UDim2.new(0, thickness, 0, size))
+    -- 右下角
+    makeFrame(UDim2.new(1, -size, 1, -thickness),  UDim2.new(0, size, 0, thickness))
+    makeFrame(UDim2.new(1, -thickness, 1, -size),  UDim2.new(0, thickness, 0, size))
 end
 
 local function addGrid(parent, maxX, maxY)
