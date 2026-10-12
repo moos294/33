@@ -22,8 +22,8 @@ local Actions = { "PushUp", "SitUp", "PullUp", "Squat" }
 local ActionNames = { PushUp = "俯卧撑", SitUp = "仰卧起坐", PullUp = "引体向上", Squat = "深蹲" }
 local CONFIG_FILE = "CrownStrength_config.json"
 local MIN_INTERVAL, MAX_INTERVAL = 0.08, 10
-local MIN_W, MIN_H, MAX_W, MAX_H = 600, 300, 1500, 720
-local COLLAPSED = 56
+local MIN_W, MIN_H, MAX_W, MAX_H = 340, 460, 560, 900
+local COLLAPSED = 52
 local IS_TOUCH = UserInputService.TouchEnabled
 
 local function findRemote(name, alt)
@@ -63,31 +63,31 @@ end
 loadConfig()
 
 local T = {
-    BG0 = Color3.fromRGB(10, 11, 16),
-    BG1 = Color3.fromRGB(20, 22, 32),
-    BG2 = Color3.fromRGB(14, 15, 22),
-    Panel = Color3.fromRGB(26, 28, 38),
-    PanelAlt = Color3.fromRGB(38, 41, 54),
-    PanelHi = Color3.fromRGB(48, 52, 68),
-    Stroke = Color3.fromRGB(58, 62, 80),
-    Text = Color3.fromRGB(240, 242, 250),
-    TextDim = Color3.fromRGB(130, 136, 155),
-    TextSub = Color3.fromRGB(100, 105, 125),
-    Accent = Color3.fromRGB(245, 179, 61),
-    Accent2 = Color3.fromRGB(255, 210, 120),
-    AccentDark = Color3.fromRGB(190, 130, 30),
-    Success = Color3.fromRGB(74, 222, 128),
-    SuccessDark = Color3.fromRGB(40, 180, 90),
-    Danger = Color3.fromRGB(248, 113, 113),
-    DangerDark = Color3.fromRGB(200, 60, 80),
-    Purple = Color3.fromRGB(167, 139, 250),
-    Info = Color3.fromRGB(96, 165, 250),
-    Pink = Color3.fromRGB(244, 114, 182),
-    F = Enum.Font.Gotham, FB = Enum.Font.GothamBold, FM = Enum.Font.GothamMedium,
+    BgDeep   = Color3.fromRGB(4, 7, 12),
+    BgPanel  = Color3.fromRGB(10, 16, 24),
+    BgPanel2 = Color3.fromRGB(16, 24, 36),
+    BgPanelHi= Color3.fromRGB(24, 36, 52),
+    Grid     = Color3.fromRGB(30, 50, 80),
+    Stroke   = Color3.fromRGB(40, 70, 110),
+    Neon     = Color3.fromRGB(0, 229, 255),
+    Neon2    = Color3.fromRGB(255, 60, 180),
+    NeonDim  = Color3.fromRGB(0, 130, 170),
+    Green    = Color3.fromRGB(0, 255, 160),
+    GreenDim = Color3.fromRGB(0, 160, 100),
+    Red      = Color3.fromRGB(255, 60, 90),
+    RedDim   = Color3.fromRGB(180, 30, 60),
+    Yellow   = Color3.fromRGB(255, 220, 80),
+    Purple   = Color3.fromRGB(180, 120, 255),
+    Text     = Color3.fromRGB(220, 235, 255),
+    TextDim  = Color3.fromRGB(110, 140, 180),
+    TextSub  = Color3.fromRGB(70, 95, 130),
+    F  = Enum.Font.GothamMedium,
+    FB = Enum.Font.GothamBold,
+    FM = Enum.Font.Code,
 }
 
 local function corner(p, r)
-    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r or 8); c.Parent = p; return c
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r or 4); c.Parent = p; return c
 end
 
 local function stroke(p, c, t, tr)
@@ -97,10 +97,12 @@ local function stroke(p, c, t, tr)
     s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; s.Parent = p; return s
 end
 
-local function padding(p, x, y)
+local function paddingSides(p, l, r, t, b)
     local pad = Instance.new("UIPadding")
-    pad.PaddingTop = UDim.new(0, y or x); pad.PaddingBottom = UDim.new(0, y or x)
-    pad.PaddingLeft = UDim.new(0, x); pad.PaddingRight = UDim.new(0, x)
+    pad.PaddingTop = UDim.new(0, t)
+    pad.PaddingBottom = UDim.new(0, b)
+    pad.PaddingLeft = UDim.new(0, l)
+    pad.PaddingRight = UDim.new(0, r)
     pad.Parent = p; return pad
 end
 
@@ -136,6 +138,62 @@ local function fmt(n)
     return out
 end
 
+local function cornerBrackets(parent, color, size, thickness)
+    color = color or T.Neon
+    size = size or 10
+    thickness = thickness or 2
+    local data = {
+        {0, 0, 1, 0, 0, 0}, {1, -size, 0, 0, 1, 0},
+        {0, 0, 0, 1, 0, 0}, {1, -size, 1, -size, 0, 1},
+    }
+    for _, d in ipairs(data) do
+        local h = Instance.new("Frame")
+        h.Size = UDim2.new(0, size, 0, thickness)
+        h.Position = UDim2.new(d[1], d[2], d[3], d[4])
+        h.BackgroundColor3 = color
+        h.BorderSizePixel = 0
+        h.ZIndex = 10
+        h.Parent = parent
+    end
+    for _, d in ipairs(data) do
+        local v = Instance.new("Frame")
+        v.Size = UDim2.new(0, thickness, 0, size)
+        v.Position = UDim2.new(d[5], d[6], d[3], d[4])
+        v.BackgroundColor3 = color
+        v.BorderSizePixel = 0
+        v.ZIndex = 10
+        v.Parent = parent
+    end
+end
+
+local function addGrid(parent)
+    local g = Instance.new("Frame")
+    g.Size = UDim2.new(1, 0, 1, 0)
+    g.BackgroundTransparency = 1
+    g.ZIndex = 1
+    g.Parent = parent
+    for i = 0, 60 do
+        local v = Instance.new("Frame")
+        v.Size = UDim2.new(0, 1, 1, 0)
+        v.Position = UDim2.new(0, i * 20, 0, 0)
+        v.BackgroundColor3 = T.Grid
+        v.BackgroundTransparency = 0.85
+        v.BorderSizePixel = 0
+        v.ZIndex = 1
+        v.Parent = g
+    end
+    for i = 0, 40 do
+        local h = Instance.new("Frame")
+        h.Size = UDim2.new(1, 0, 0, 1)
+        h.Position = UDim2.new(0, 0, 0, i * 20)
+        h.BackgroundColor3 = T.Grid
+        h.BackgroundTransparency = 0.85
+        h.BorderSizePixel = 0
+        h.ZIndex = 1
+        h.Parent = g
+    end
+end
+
 local isTraining, trainThread = false, nil
 local trainCount, totalCount = 0, tonumber(Config.TotalReps) or 0
 local startTime, isCollapsed, savedSize = 0, false, nil
@@ -145,6 +203,7 @@ local flying, flyBV, flyBG = false, nil, nil
 local flySpeed = Config.FlySpeed or 50
 local startAutoTrain, stopAutoTrain, updateStatus, updateStartBtn, collapse, expand
 local startFly, stopFly, applyWalkSpeed
+local updateRebirthDisplay
 
 local MobileInput = { Forward = false, Back = false, Left = false, Right = false, Up = false, Down = false }
 
@@ -204,129 +263,105 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.Parent = parentGui
 
-local W, H = 1060, 460
+local W, H = 380, 660
 
 local Main = Instance.new("Frame")
 Main.Size = UDim2.new(0, W, 0, H)
-Main.Position = UDim2.new(0, 40, 0.5, -H / 2)
-Main.BackgroundColor3 = T.BG0
+Main.Position = UDim2.new(0, 30, 0.5, -H / 2)
+Main.BackgroundColor3 = T.BgDeep
 Main.BorderSizePixel = 0
 Main.Active = true
 Main.ClipsDescendants = true
 Main.Parent = ScreenGui
-local mainCorner = corner(Main, 18)
+local mainCorner = corner(Main, 6)
+local mainStroke = stroke(Main, T.Neon, 1.2, 0.35)
 
 local bgGrad = gradientMulti(Main, {
-    {0, T.BG1}, {0.5, T.BG0}, {1, T.BG2},
+    {0, T.BgPanel},
+    {0.5, T.BgDeep},
+    {1, Color3.fromRGB(6, 12, 20)},
 }, 135)
 
-local mainStroke = stroke(Main, T.Accent, 1.2, 0.55)
-
-local innerHighlight = Instance.new("Frame")
-innerHighlight.Size = UDim2.new(1, 0, 0, 100)
-innerHighlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-innerHighlight.BackgroundTransparency = 0.96
-innerHighlight.BorderSizePixel = 0
-innerHighlight.ZIndex = 1
-innerHighlight.Parent = Main
-gradient(innerHighlight, Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255), 90)
+addGrid(Main)
+cornerBrackets(Main, T.Neon, 14, 2)
 
 local accentBar = Instance.new("Frame")
-accentBar.Size = UDim2.new(1, 0, 0, 3)
-accentBar.BackgroundColor3 = T.Accent
+accentBar.Size = UDim2.new(1, 0, 0, 2)
+accentBar.BackgroundColor3 = T.Neon
 accentBar.BorderSizePixel = 0
-accentBar.ZIndex = 5
+accentBar.ZIndex = 8
 accentBar.Parent = Main
 gradientMulti(accentBar, {
-    {0, T.Accent},
-    {0.5, T.Pink},
-    {1, T.Purple},
+    {0, T.Neon}, {0.35, T.Purple}, {0.7, T.Neon2}, {1, T.Neon},
 }, 0)
 
 local accentGlow = Instance.new("Frame")
-accentGlow.Size = UDim2.new(1, 0, 0, 12)
+accentGlow.Size = UDim2.new(1, 0, 0, 8)
 accentGlow.Position = UDim2.new(0, 0, 0, 0)
-accentGlow.BackgroundColor3 = T.Accent
-accentGlow.BackgroundTransparency = 0.85
+accentGlow.BackgroundColor3 = T.Neon
+accentGlow.BackgroundTransparency = 0.7
 accentGlow.BorderSizePixel = 0
-accentGlow.ZIndex = 4
+accentGlow.ZIndex = 7
 accentGlow.Parent = Main
-gradient(accentGlow, T.Accent, T.Purple, 0)
+gradientMulti(accentGlow, {{0, T.Neon}, {1, T.BgDeep}}, 90)
 
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 62)
-Header.BackgroundColor3 = T.Panel
-Header.BackgroundTransparency = 0.15
+Header.Size = UDim2.new(1, 0, 0, 58)
+Header.BackgroundColor3 = T.BgPanel
+Header.BackgroundTransparency = 0.1
 Header.BorderSizePixel = 0
 Header.ZIndex = 3
 Header.Parent = Main
 
-local HeaderGlow = Instance.new("Frame")
-HeaderGlow.Size = UDim2.new(1, 0, 1, 0)
-HeaderGlow.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-HeaderGlow.BackgroundTransparency = 0.94
-HeaderGlow.BorderSizePixel = 0
-HeaderGlow.ZIndex = 3
-HeaderGlow.Parent = Header
-gradientMulti(HeaderGlow, {
-    {0, T.Accent},
-    {0.5, T.Pink},
-    {1, T.Purple},
-}, 25)
-
 local HeaderLine = Instance.new("Frame")
 HeaderLine.Size = UDim2.new(1, 0, 0, 1)
 HeaderLine.Position = UDim2.new(0, 0, 1, -1)
-HeaderLine.BackgroundColor3 = T.Accent
-HeaderLine.BackgroundTransparency = 0.6
+HeaderLine.BackgroundColor3 = T.Neon
+HeaderLine.BackgroundTransparency = 0.4
 HeaderLine.BorderSizePixel = 0
 HeaderLine.ZIndex = 4
 HeaderLine.Parent = Header
-gradient(HeaderLine, T.Accent, T.Purple, 0)
+gradientMulti(HeaderLine, {{0, T.Neon}, {0.5, T.Neon2}, {1, T.Neon}}, 0)
 
 local Logo = Instance.new("Frame")
-Logo.Size = UDim2.new(0, 36, 0, 36)
-Logo.Position = UDim2.new(0, 18, 0.5, -18)
-Logo.BackgroundColor3 = T.Accent
+Logo.Size = UDim2.new(0, 34, 0, 34)
+Logo.Position = UDim2.new(0, 14, 0.5, -17)
+Logo.BackgroundColor3 = T.Neon
 Logo.BorderSizePixel = 0
 Logo.ZIndex = 5
 Logo.Parent = Header
-corner(Logo, 11)
-gradientMulti(Logo, {
-    {0, T.Accent2},
-    {1, T.AccentDark},
-}, 135)
-
-stroke(Logo, T.Accent2, 1, 0.4)
+corner(Logo, 6)
+gradientMulti(Logo, {{0, T.Neon}, {1, T.NeonDim}}, 135)
+stroke(Logo, T.Neon, 1.5, 0.2)
 
 local LogoText = Instance.new("TextLabel")
 LogoText.Size = UDim2.new(1, 0, 1, 0)
 LogoText.BackgroundTransparency = 1
 LogoText.Text = "力"
-LogoText.TextColor3 = Color3.fromRGB(30, 20, 0)
+LogoText.TextColor3 = T.BgDeep
 LogoText.Font = T.FB
-LogoText.TextSize = 18
+LogoText.TextSize = 17
 LogoText.ZIndex = 6
 LogoText.Parent = Logo
 
 local TitleLbl = Instance.new("TextLabel")
-TitleLbl.Size = UDim2.new(0, 300, 0, 20)
-TitleLbl.Position = UDim2.new(0, 64, 0, 12)
+TitleLbl.Size = UDim2.new(0, 200, 0, 18)
+TitleLbl.Position = UDim2.new(0, 56, 0, 10)
 TitleLbl.BackgroundTransparency = 1
 TitleLbl.Text = "力量之冠"
 TitleLbl.TextColor3 = T.Text
 TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
 TitleLbl.Font = T.FB
-TitleLbl.TextSize = 15
+TitleLbl.TextSize = 12
 TitleLbl.ZIndex = 5
 TitleLbl.Parent = Header
 
 local SubTitle = Instance.new("TextLabel")
-SubTitle.Size = UDim2.new(0, 300, 0, 14)
-SubTitle.Position = UDim2.new(0, 64, 0, 32)
+SubTitle.Size = UDim2.new(0, 200, 0, 14)
+SubTitle.Position = UDim2.new(0, 56, 0, 28)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "AUTO TRAINER   ·   v1.0"
-SubTitle.TextColor3 = T.TextDim
+SubTitle.Text = "// 系统 v1.0"
+SubTitle.TextColor3 = T.Neon
 SubTitle.TextXAlignment = Enum.TextXAlignment.Left
 SubTitle.Font = T.FM
 SubTitle.TextSize = 10
@@ -336,8 +371,8 @@ SubTitle.Parent = Header
 local HeaderDotGlow = Instance.new("Frame")
 HeaderDotGlow.Size = UDim2.new(0, 16, 0, 16)
 HeaderDotGlow.Position = UDim2.new(1, -116, 0.5, -8)
-HeaderDotGlow.BackgroundColor3 = T.Danger
-HeaderDotGlow.BackgroundTransparency = 0.7
+HeaderDotGlow.BackgroundColor3 = T.Red
+HeaderDotGlow.BackgroundTransparency = 0.65
 HeaderDotGlow.BorderSizePixel = 0
 HeaderDotGlow.ZIndex = 4
 HeaderDotGlow.Parent = Header
@@ -346,7 +381,7 @@ corner(HeaderDotGlow, 8)
 local HeaderDot = Instance.new("Frame")
 HeaderDot.Size = UDim2.new(0, 8, 0, 8)
 HeaderDot.Position = UDim2.new(1, -112, 0.5, -4)
-HeaderDot.BackgroundColor3 = T.Danger
+HeaderDot.BackgroundColor3 = T.Red
 HeaderDot.BorderSizePixel = 0
 HeaderDot.ZIndex = 5
 HeaderDot.Parent = Header
@@ -354,177 +389,87 @@ corner(HeaderDot, 4)
 
 local function headerButton(text, base, xOff, hoverColor)
     local b = Instance.new("TextButton")
-    b.Size = UDim2.new(0, 30, 0, 30)
-    b.Position = UDim2.new(1, xOff, 0.5, -15)
+    b.Size = UDim2.new(0, 28, 0, 28)
+    b.Position = UDim2.new(1, xOff, 0.5, -14)
     b.BackgroundColor3 = base
-    b.BackgroundTransparency = 0.5
+    b.BackgroundTransparency = 0.4
     b.Text = text
     b.TextColor3 = T.Text
     b.Font = T.FB
-    b.TextSize = 16
+    b.TextSize = 15
     b.AutoButtonColor = false
     b.BorderSizePixel = 0
     b.ZIndex = 5
     b.Parent = Header
-    corner(b, 8)
-    stroke(b, T.Stroke, 1, 0.5)
+    corner(b, 4)
+    stroke(b, base, 1.2, 0.3)
     b.MouseEnter:Connect(function()
-        tween(b, { BackgroundTransparency = 0.15, BackgroundColor3 = hoverColor or base }, 0.15)
+        tween(b, { BackgroundTransparency = 0.1, TextColor3 = hoverColor or T.Neon }, 0.15)
     end)
     b.MouseLeave:Connect(function()
-        tween(b, { BackgroundTransparency = 0.5, BackgroundColor3 = base }, 0.15)
+        tween(b, { BackgroundTransparency = 0.4, TextColor3 = T.Text }, 0.15)
     end)
     return b
 end
 
-local CloseBtn = headerButton("×", T.Danger, -42, T.Danger)
-local MinBtn = headerButton("◎", T.PanelAlt, -78, T.AccentDark)
+local CloseBtn = headerButton("×", T.RedDim, -42, T.Red)
+local MinBtn = headerButton("◆", T.NeonDim, -74, T.Neon)
 
 local Content = Instance.new("ScrollingFrame")
-Content.Size = UDim2.new(1, 0, 1, -62 - 68)
-Content.Position = UDim2.new(0, 0, 0, 62)
+Content.Size = UDim2.new(1, 0, 1, -58 - 58)
+Content.Position = UDim2.new(0, 0, 0, 58)
 Content.BackgroundTransparency = 1
 Content.BorderSizePixel = 0
-Content.ScrollBarThickness = 4
-Content.ScrollBarImageColor3 = T.Accent
-Content.ScrollBarImageTransparency = 0.3
-Content.ScrollingDirection = Enum.ScrollingDirection.X
+Content.ScrollBarThickness = 3
+Content.ScrollBarImageColor3 = T.Neon
+Content.ScrollBarImageTransparency = 0.4
+Content.ScrollingDirection = Enum.ScrollingDirection.Y
 Content.CanvasSize = UDim2.new(0, 0, 0, 0)
-Content.AutomaticCanvasSize = Enum.AutomaticSize.X
+Content.AutomaticCanvasSize = Enum.AutomaticSize.Y
 Content.ZIndex = 2
 Content.Parent = Main
-padding(Content, 16)
+paddingSides(Content, 10, 10, 10, 10)
 
 local ContentLayout = Instance.new("UIListLayout")
-ContentLayout.FillDirection = Enum.FillDirection.Horizontal
-ContentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+ContentLayout.FillDirection = Enum.FillDirection.Vertical
+ContentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 ContentLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-ContentLayout.Padding = UDim.new(0, 14)
+ContentLayout.Padding = UDim.new(0, 8)
 ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ContentLayout.Parent = Content
 
-local function card(width, layoutOrder, accentColor)
-    local f = Instance.new("Frame")
-    f.Size = UDim2.new(0, width, 1, 0)
-    f.BackgroundColor3 = T.Panel
-    f.BackgroundTransparency = 0.08
-    f.BorderSizePixel = 0
-    f.LayoutOrder = layoutOrder or 0
-    f.Parent = Content
-    corner(f, 14)
-
-    stroke(f, accentColor or T.Stroke, 1, 0.35)
-
-    local hl = Instance.new("Frame")
-    hl.Size = UDim2.new(1, 0, 0, 60)
-    hl.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    hl.BackgroundTransparency = 0.96
-    hl.BorderSizePixel = 0
-    hl.ZIndex = 1
-    hl.Parent = f
-    gradient(hl, Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255), 90)
-
-    if accentColor then
-        local topBar = Instance.new("Frame")
-        topBar.Size = UDim2.new(1, 0, 0, 2)
-        topBar.BackgroundColor3 = accentColor
-        topBar.BorderSizePixel = 0
-        topBar.ZIndex = 3
-        topBar.Parent = f
-        gradient(topBar, accentColor, Color3.fromRGB(
-            math.floor(accentColor.R * 255 * 0.6),
-            math.floor(accentColor.G * 255 * 0.6),
-            math.floor(accentColor.B * 255 * 0.6)
-        ), 0)
-    end
-
-    padding(f, 14, 12)
-
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 9)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.FillDirection = Enum.FillDirection.Vertical
-    layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    layout.VerticalAlignment = Enum.VerticalAlignment.Top
-    layout.Parent = f
-    return f
-end
-
-local function cardTitle(parent, text, accentColor)
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 22)
-    row.BackgroundTransparency = 1
-    row.Parent = parent
-
-    local bar = Instance.new("Frame")
-    bar.Size = UDim2.new(0, 3, 0, 14)
-    bar.Position = UDim2.new(0, 0, 0.5, -7)
-    bar.BackgroundColor3 = accentColor or T.Accent
-    bar.BorderSizePixel = 0
-    bar.Parent = row
-    corner(bar, 2)
-
-    local barGlow = Instance.new("Frame")
-    barGlow.Size = UDim2.new(0, 6, 0, 14)
-    barGlow.Position = UDim2.new(0, -2, 0.5, -7)
-    barGlow.BackgroundColor3 = accentColor or T.Accent
-    barGlow.BackgroundTransparency = 0.7
-    barGlow.BorderSizePixel = 0
-    barGlow.Parent = row
-    corner(barGlow, 3)
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -14, 1, 0)
-    lbl.Position = UDim2.new(0, 14, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.TextColor3 = accentColor or T.Text
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Font = T.FB
-    lbl.TextSize = 12
-    lbl.Parent = row
-end
-
 local function notify(text, color)
     if not Config.Notifications or not ScreenGui.Parent then return end
-    color = color or T.Accent
+    color = color or T.Neon
 
     local toast = Instance.new("Frame")
     toast.Size = UDim2.new(0, 280, 0, 44)
     toast.Position = UDim2.new(0.5, -140, 0, -60)
-    toast.BackgroundColor3 = T.Panel
+    toast.BackgroundColor3 = T.BgPanel
     toast.BackgroundTransparency = 0.05
     toast.BorderSizePixel = 0
     toast.ZIndex = 100
     toast.Parent = ScreenGui
-    corner(toast, 12)
-    stroke(toast, color, 1.2, 0.3)
+    corner(toast, 4)
+    stroke(toast, color, 1.4, 0.2)
+    cornerBrackets(toast, color, 8, 2)
 
     local acc = Instance.new("Frame")
-    acc.Size = UDim2.new(0, 4, 0, 26)
-    acc.Position = UDim2.new(0, 10, 0.5, -13)
+    acc.Size = UDim2.new(0, 3, 0, 26)
+    acc.Position = UDim2.new(0, 12, 0.5, -13)
     acc.BackgroundColor3 = color
     acc.BorderSizePixel = 0
     acc.Parent = toast
     corner(acc, 2)
 
-    local accGlow = Instance.new("Frame")
-    accGlow.Size = UDim2.new(0, 8, 0, 26)
-    accGlow.Position = UDim2.new(0, 8, 0.5, -13)
-    accGlow.BackgroundColor3 = color
-    accGlow.BackgroundTransparency = 0.7
-    accGlow.BorderSizePixel = 0
-    accGlow.Parent = toast
-    corner(accGlow, 4)
-
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, -32, 1, 0)
-    lbl.Position = UDim2.new(0, 22, 0, 0)
+    lbl.Position = UDim2.new(0, 24, 0, 0)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.TextColor3 = T.Text
-    lbl.Font = T.FM
-    lbl.TextSize = 13
+    lbl.Font = T.F
+    lbl.TextSize = 12
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = toast
 
@@ -537,52 +482,157 @@ local function notify(text, color)
     end)
 end
 
+local function accordionCard(title, accentColor, defaultOpen)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, 0, 0, 0)
+    card.AutomaticSize = Enum.AutomaticSize.Y
+    card.BackgroundColor3 = T.BgPanel
+    card.BackgroundTransparency = 0.15
+    card.BorderSizePixel = 0
+    card.Parent = Content
+    corner(card, 4)
+    stroke(card, accentColor or T.Neon, 1, 0.4)
+
+    local cardLayout = Instance.new("UIListLayout")
+    cardLayout.Padding = UDim.new(0, 0)
+    cardLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    cardLayout.Parent = card
+
+    local header = Instance.new("TextButton")
+    header.Size = UDim2.new(1, 0, 0, 38)
+    header.BackgroundTransparency = 1
+    header.Text = ""
+    header.AutoButtonColor = false
+    header.LayoutOrder = 1
+    header.Parent = card
+
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(0, 3, 0, 14)
+    bar.Position = UDim2.new(0, 12, 0.5, -7)
+    bar.BackgroundColor3 = accentColor
+    bar.BorderSizePixel = 0
+    bar.Parent = header
+    corner(bar, 2)
+
+    local barGlow = Instance.new("Frame")
+    barGlow.Size = UDim2.new(0, 6, 0, 14)
+    barGlow.Position = UDim2.new(0, 10.5, 0.5, -7)
+    barGlow.BackgroundColor3 = accentColor
+    barGlow.BackgroundTransparency = 0.6
+    barGlow.BorderSizePixel = 0
+    barGlow.Parent = header
+    corner(barGlow, 3)
+
+    local prefix = Instance.new("TextLabel")
+    prefix.Size = UDim2.new(0, 20, 1, 0)
+    prefix.Position = UDim2.new(0, 22, 0, 0)
+    prefix.BackgroundTransparency = 1
+    prefix.Text = "›"
+    prefix.TextColor3 = accentColor
+    prefix.TextXAlignment = Enum.TextXAlignment.Left
+    prefix.Font = T.FB
+    prefix.TextSize = 14
+    prefix.Parent = header
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -70, 1, 0)
+    lbl.Position = UDim2.new(0, 38, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = title
+    lbl.TextColor3 = accentColor
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Font = T.FB
+    lbl.TextSize = 11
+    lbl.Parent = header
+
+    local arrow = Instance.new("TextLabel")
+    arrow.Size = UDim2.new(0, 22, 0, 22)
+    arrow.Position = UDim2.new(1, -30, 0.5, -11)
+    arrow.BackgroundTransparency = 1
+    arrow.Text = defaultOpen and "▾" or "▸"
+    arrow.TextColor3 = accentColor
+    arrow.Font = T.FB
+    arrow.TextSize = 14
+    arrow.Parent = header
+
+    local body = Instance.new("Frame")
+    body.Size = UDim2.new(1, 0, 0, 0)
+    body.AutomaticSize = Enum.AutomaticSize.Y
+    body.BackgroundTransparency = 1
+    body.Visible = defaultOpen
+    body.LayoutOrder = 2
+    body.Parent = card
+
+    local bodyPad = Instance.new("UIPadding")
+    bodyPad.PaddingLeft = UDim.new(0, 12)
+    bodyPad.PaddingRight = UDim.new(0, 12)
+    bodyPad.PaddingBottom = UDim.new(0, 12)
+    bodyPad.PaddingTop = UDim.new(0, 0)
+    bodyPad.Parent = body
+
+    local bodyLayout = Instance.new("UIListLayout")
+    bodyLayout.Padding = UDim.new(0, 8)
+    bodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    bodyLayout.Parent = body
+
+    header.MouseButton1Click:Connect(function()
+        local open = not body.Visible
+        body.Visible = open
+        arrow.Text = open and "▾" or "▸"
+    end)
+
+    return body
+end
+
 local function toggleRow(parent, labelText, key, onToggle)
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 32)
+    row.Size = UDim2.new(1, 0, 0, 30)
     row.BackgroundTransparency = 1
     row.Parent = parent
 
     local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -60, 1, 0)
+    lbl.Size = UDim2.new(1, -56, 1, 0)
     lbl.BackgroundTransparency = 1
     lbl.Text = labelText
     lbl.TextColor3 = T.Text
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Font = T.FM
-    lbl.TextSize = 13
+    lbl.Font = T.F
+    lbl.TextSize = 12
     lbl.Parent = row
 
     local switch = Instance.new("TextButton")
-    switch.Size = UDim2.new(0, 46, 0, 26)
-    switch.Position = UDim2.new(1, -46, 0.5, -13)
-    switch.BackgroundColor3 = Config[key] and T.Success or T.PanelAlt
+    switch.Size = UDim2.new(0, 42, 0, 22)
+    switch.Position = UDim2.new(1, -42, 0.5, -11)
+    switch.BackgroundColor3 = Config[key] and T.Green or T.BgPanel2
     switch.Text = ""
     switch.AutoButtonColor = false
     switch.BorderSizePixel = 0
     switch.Parent = row
-    corner(switch, 13)
-    stroke(switch, Config[key] and T.SuccessDark or T.Stroke, 1, 0.4)
+    corner(switch, 3)
+    stroke(switch, Config[key] and T.Green or T.Stroke, 1, 0.3)
 
     local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 20, 0, 20)
-    knob.Position = Config[key] and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10)
-    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.Size = UDim2.new(0, 16, 0, 16)
+    knob.Position = Config[key] and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+    knob.BackgroundColor3 = Config[key] and T.BgDeep or T.TextDim
     knob.BorderSizePixel = 0
     knob.Parent = switch
-    corner(knob, 10)
+    corner(knob, 2)
 
     local function refresh()
         local on = Config[key]
-        tween(switch, { BackgroundColor3 = on and T.Success or T.PanelAlt }, 0.2)
-        tween(knob, { Position = on and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10) }, 0.2)
+        tween(switch, { BackgroundColor3 = on and T.Green or T.BgPanel2 }, 0.2)
+        tween(knob, {
+            Position = on and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
+            BackgroundColor3 = on and T.BgDeep or T.TextDim,
+        }, 0.2)
     end
 
     switch.MouseButton1Click:Connect(function()
         Config[key] = not Config[key]
         if key == "AutoRebirth" and Config[key] and not RebirthEvent then
             Config[key] = false
-            notify("未找到重生事件", T.Danger)
+            notify("未找到重生事件", T.Red)
         end
         refresh()
         if onToggle then onToggle(Config[key]) end
@@ -592,40 +642,40 @@ end
 
 local function numberInput(parent, labelText, key, minV, maxV, onChange)
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 32)
+    row.Size = UDim2.new(1, 0, 0, 30)
     row.BackgroundTransparency = 1
     row.Parent = parent
 
     local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(0, 80, 1, 0)
+    lbl.Size = UDim2.new(0, 76, 1, 0)
     lbl.BackgroundTransparency = 1
     lbl.Text = labelText
     lbl.TextColor3 = T.TextDim
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Font = T.FM
-    lbl.TextSize = 12
+    lbl.Font = T.F
+    lbl.TextSize = 11
     lbl.Parent = row
 
     local box = Instance.new("TextBox")
-    box.Size = UDim2.new(1, -80, 1, 0)
-    box.Position = UDim2.new(0, 80, 0, 0)
-    box.BackgroundColor3 = T.PanelAlt
+    box.Size = UDim2.new(1, -76, 1, 0)
+    box.Position = UDim2.new(0, 76, 0, 0)
+    box.BackgroundColor3 = T.BgPanel2
     box.Text = tostring(Config[key])
-    box.TextColor3 = T.Text
+    box.TextColor3 = T.Neon
     box.PlaceholderColor3 = T.TextDim
     box.Font = T.FM
     box.TextSize = 12
     box.ClearTextOnFocus = false
     box.BorderSizePixel = 0
     box.Parent = row
-    corner(box, 8)
-    stroke(box, T.Stroke, 1, 0.4)
+    corner(box, 3)
+    stroke(box, T.Stroke, 1, 0.3)
 
     box.Focused:Connect(function()
-        tween(box, { BackgroundColor3 = T.PanelHi }, 0.15)
+        tween(box, { BackgroundColor3 = T.BgPanelHi }, 0.15)
     end)
     box.FocusLost:Connect(function()
-        tween(box, { BackgroundColor3 = T.PanelAlt }, 0.15)
+        tween(box, { BackgroundColor3 = T.BgPanel2 }, 0.15)
         local n = tonumber(box.Text)
         if n and n >= minV and n <= maxV then
             box.Text = tostring(n)
@@ -634,51 +684,85 @@ local function numberInput(parent, labelText, key, minV, maxV, onChange)
             saveConfig()
         else
             box.Text = tostring(Config[key])
-            notify(string.format("需在 %d ~ %d 之间", minV, maxV), T.Danger)
+            notify(string.format("范围 %d ~ %d", minV, maxV), T.Red)
         end
     end)
 end
 
+local function infoRow(parent, label, color)
+    local r = Instance.new("Frame")
+    r.Size = UDim2.new(1, 0, 0, 26)
+    r.BackgroundColor3 = T.BgPanel2
+    r.BackgroundTransparency = 0.4
+    r.Parent = parent
+    corner(r, 3)
+    stroke(r, T.Stroke, 1, 0.6)
+
+    local l = Instance.new("TextLabel")
+    l.Size = UDim2.new(0.55, -12, 1, 0)
+    l.Position = UDim2.new(0, 10, 0, 0)
+    l.BackgroundTransparency = 1
+    l.Text = label
+    l.TextColor3 = T.TextDim
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Font = T.F
+    l.TextSize = 11
+    l.Parent = r
+
+    local v = Instance.new("TextLabel")
+    v.Size = UDim2.new(0.45, -12, 1, 0)
+    v.Position = UDim2.new(0.55, 0, 0, 0)
+    v.BackgroundTransparency = 1
+    v.Text = "—"
+    v.TextColor3 = color or T.Text
+    v.TextXAlignment = Enum.TextXAlignment.Right
+    v.Font = T.FM
+    v.TextSize = 12
+    v.Parent = r
+    return v
+end
+
 local FlyControls = Instance.new("Frame")
-FlyControls.Size = UDim2.new(0, 260, 0, 160)
-FlyControls.Position = UDim2.new(0.5, -130, 1, -180)
-FlyControls.BackgroundColor3 = T.Panel
-FlyControls.BackgroundTransparency = 0.25
+FlyControls.Size = UDim2.new(0, 230, 0, 140)
+FlyControls.Position = UDim2.new(0.5, -115, 1, -160)
+FlyControls.BackgroundColor3 = T.BgPanel
+FlyControls.BackgroundTransparency = 0.2
 FlyControls.Visible = false
 FlyControls.ZIndex = 30
 FlyControls.Parent = ScreenGui
-corner(FlyControls, 20)
-stroke(FlyControls, T.Accent, 1.2, 0.4)
+corner(FlyControls, 6)
+stroke(FlyControls, T.Neon, 1.2, 0.3)
+cornerBrackets(FlyControls, T.Neon, 10, 2)
 
 local function flyButton(text, x, y, color)
     local b = Instance.new("TextButton")
-    b.Size = UDim2.new(0, 52, 0, 52)
+    b.Size = UDim2.new(0, 46, 0, 46)
     b.Position = UDim2.new(0, x, 0, y)
-    b.BackgroundColor3 = color or T.PanelAlt
+    b.BackgroundColor3 = T.BgPanel2
     b.BackgroundTransparency = 0.1
     b.Text = text
-    b.TextColor3 = T.Text
+    b.TextColor3 = color or T.Neon
     b.Font = T.FB
-    b.TextSize = 22
+    b.TextSize = 20
     b.AutoButtonColor = false
     b.BorderSizePixel = 0
     b.Parent = FlyControls
-    corner(b, 14)
-    stroke(b, color or T.Accent, 1, 0.4)
+    corner(b, 4)
+    stroke(b, color or T.Neon, 1.2, 0.3)
     return b
 end
 
-local BtnUp    = flyButton("▲", 62, 6, T.Info)
-local BtnDown  = flyButton("▼", 62, 108, T.Purple)
-local BtnLeft  = flyButton("◀", 8, 57, T.PanelAlt)
-local BtnRight = flyButton("▶", 116, 57, T.PanelAlt)
-local BtnRise  = flyButton("＋", 178, 6, T.Success)
-local BtnFall  = flyButton("－", 178, 108, T.Danger)
+local BtnUp    = flyButton("▲", 56, 6, T.Neon)
+local BtnDown  = flyButton("▼", 56, 92, T.Purple)
+local BtnLeft  = flyButton("◀", 6, 49, T.Neon)
+local BtnRight = flyButton("▶", 106, 49, T.Neon)
+local BtnRise  = flyButton("＋", 160, 6, T.Green)
+local BtnFall  = flyButton("－", 160, 92, T.Red)
 
 local function bindHold(btn, key)
     local function set(v)
         MobileInput[key] = v
-        tween(btn, { BackgroundTransparency = v and 0.45 or 0.1 }, 0.1)
+        tween(btn, { BackgroundTransparency = v and 0.6 or 0.1 }, 0.1)
     end
     btn.MouseButton1Down:Connect(function() set(true) end)
     btn.MouseButton1Up:Connect(function() set(false) end)
@@ -699,84 +783,49 @@ local function clearMobileInput()
     end
 end
 
-local powerCard = card(230, 1, T.Accent)
-cardTitle(powerCard, "力量数据", T.Accent)
+local powerCard = accordionCard("◆ 力量数据", T.Neon, true)
 
-local function powerRow(parent, label, color)
-    local r = Instance.new("Frame")
-    r.Size = UDim2.new(1, 0, 0, 26)
-    r.BackgroundColor3 = T.PanelAlt
-    r.BackgroundTransparency = 0.6
-    r.Parent = parent
-    corner(r, 8)
-    stroke(r, T.Stroke, 1, 0.7)
+local rowStrength = infoRow(powerCard, "当前力量", T.Neon)
+local rowSession  = infoRow(powerCard, "本次增长", T.Green)
+local rowBefore   = infoRow(powerCard, "训练前力量", T.Yellow)
+local rowPerRep   = infoRow(powerCard, "每次增量", T.Purple)
 
-    local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(0.5, -12, 1, 0)
-    l.Position = UDim2.new(0, 12, 0, 0)
-    l.BackgroundTransparency = 1
-    l.Text = label
-    l.TextColor3 = T.TextDim
-    l.TextXAlignment = Enum.TextXAlignment.Left
-    l.Font = T.FM
-    l.TextSize = 12
-    l.Parent = r
-
-    local v = Instance.new("TextLabel")
-    v.Size = UDim2.new(0.5, -12, 1, 0)
-    v.Position = UDim2.new(0.5, 0, 0, 0)
-    v.BackgroundTransparency = 1
-    v.Text = "—"
-    v.TextColor3 = color or T.Text
-    v.TextXAlignment = Enum.TextXAlignment.Right
-    v.Font = T.FB
-    v.TextSize = 13
-    v.Parent = r
-    return v
-end
-
-local rowStrength = powerRow(powerCard, "当前力量", T.Accent2)
-local rowSession  = powerRow(powerCard, "本次增长", T.Success)
-local rowBefore   = powerRow(powerCard, "训练前力量", T.Info)
-local rowPerRep   = powerRow(powerCard, "每次增量", T.Purple)
-
-local trainCard = card(250, 2, T.Success)
-cardTitle(trainCard, "训练", T.Success)
+local trainCard = accordionCard("◆ 训练", T.Green, true)
 
 local actionRow = Instance.new("Frame")
-actionRow.Size = UDim2.new(1, 0, 0, 32)
+actionRow.Size = UDim2.new(1, 0, 0, 30)
 actionRow.BackgroundTransparency = 1
 actionRow.Parent = trainCard
 
 local actionLbl = Instance.new("TextLabel")
-actionLbl.Size = UDim2.new(0, 70, 1, 0)
+actionLbl.Size = UDim2.new(0, 60, 1, 0)
 actionLbl.BackgroundTransparency = 1
 actionLbl.Text = "动作"
 actionLbl.TextColor3 = T.TextDim
 actionLbl.TextXAlignment = Enum.TextXAlignment.Left
-actionLbl.Font = T.FM
-actionLbl.TextSize = 12
+actionLbl.Font = T.F
+actionLbl.TextSize = 10
 actionLbl.Parent = actionRow
 
 local actionBtn = Instance.new("TextButton")
-actionBtn.Size = UDim2.new(1, -70, 1, 0)
-actionBtn.Position = UDim2.new(0, 70, 0, 0)
-actionBtn.BackgroundColor3 = T.PanelAlt
+actionBtn.Size = UDim2.new(1, -60, 1, 0)
+actionBtn.Position = UDim2.new(0, 60, 0, 0)
+actionBtn.BackgroundColor3 = T.BgPanel2
 actionBtn.Text = ActionNames[Config.Action] or Config.Action
-actionBtn.TextColor3 = T.Text
-actionBtn.Font = T.FM
+actionBtn.TextColor3 = T.Neon
+actionBtn.Font = T.F
 actionBtn.TextSize = 12
 actionBtn.AutoButtonColor = false
 actionBtn.BorderSizePixel = 0
 actionBtn.Parent = actionRow
-corner(actionBtn, 8)
-stroke(actionBtn, T.Stroke, 1, 0.4)
+corner(actionBtn, 3)
+stroke(actionBtn, T.Stroke, 1, 0.3)
 
 actionBtn.MouseEnter:Connect(function()
-    tween(actionBtn, { BackgroundColor3 = T.PanelHi }, 0.15)
+    tween(actionBtn, { BackgroundColor3 = T.BgPanelHi }, 0.15)
 end)
 actionBtn.MouseLeave:Connect(function()
-    tween(actionBtn, { BackgroundColor3 = T.PanelAlt }, 0.15)
+    tween(actionBtn, { BackgroundColor3 = T.BgPanel2 }, 0.15)
 end)
 
 local actionIndex = 1
@@ -793,26 +842,26 @@ actionBtn.MouseButton1Click:Connect(function()
 end)
 
 local intervalRow = Instance.new("Frame")
-intervalRow.Size = UDim2.new(1, 0, 0, 32)
+intervalRow.Size = UDim2.new(1, 0, 0, 30)
 intervalRow.BackgroundTransparency = 1
 intervalRow.Parent = trainCard
 
 local intervalLbl = Instance.new("TextLabel")
-intervalLbl.Size = UDim2.new(0, 70, 1, 0)
+intervalLbl.Size = UDim2.new(0, 60, 1, 0)
 intervalLbl.BackgroundTransparency = 1
 intervalLbl.Text = "间隔(秒)"
 intervalLbl.TextColor3 = T.TextDim
 intervalLbl.TextXAlignment = Enum.TextXAlignment.Left
-intervalLbl.Font = T.FM
-intervalLbl.TextSize = 12
+intervalLbl.Font = T.F
+intervalLbl.TextSize = 10
 intervalLbl.Parent = intervalRow
 
 local intervalBox = Instance.new("TextBox")
-intervalBox.Size = UDim2.new(1, -70, 1, 0)
-intervalBox.Position = UDim2.new(0, 70, 0, 0)
-intervalBox.BackgroundColor3 = T.PanelAlt
+intervalBox.Size = UDim2.new(1, -60, 1, 0)
+intervalBox.Position = UDim2.new(0, 60, 0, 0)
+intervalBox.BackgroundColor3 = T.BgPanel2
 intervalBox.Text = tostring(Config.Interval)
-intervalBox.TextColor3 = T.Text
+intervalBox.TextColor3 = T.Neon
 intervalBox.PlaceholderText = "0.1"
 intervalBox.PlaceholderColor3 = T.TextDim
 intervalBox.Font = T.FM
@@ -820,12 +869,12 @@ intervalBox.TextSize = 12
 intervalBox.ClearTextOnFocus = false
 intervalBox.BorderSizePixel = 0
 intervalBox.Parent = intervalRow
-corner(intervalBox, 8)
-stroke(intervalBox, T.Stroke, 1, 0.4)
+corner(intervalBox, 3)
+stroke(intervalBox, T.Stroke, 1, 0.3)
 
-intervalBox.Focused:Connect(function() tween(intervalBox, { BackgroundColor3 = T.PanelHi }, 0.15) end)
+intervalBox.Focused:Connect(function() tween(intervalBox, { BackgroundColor3 = T.BgPanelHi }, 0.15) end)
 intervalBox.FocusLost:Connect(function()
-    tween(intervalBox, { BackgroundColor3 = T.PanelAlt }, 0.15)
+    tween(intervalBox, { BackgroundColor3 = T.BgPanel2 }, 0.15)
     local n = tonumber(intervalBox.Text)
     if n and n >= MIN_INTERVAL and n <= MAX_INTERVAL then
         Config.Interval = n
@@ -833,115 +882,262 @@ intervalBox.FocusLost:Connect(function()
         saveConfig()
     else
         intervalBox.Text = tostring(Config.Interval)
-        notify(string.format("间隔需在 %.2f ~ %d 之间", MIN_INTERVAL, MAX_INTERVAL), T.Danger)
+        notify(string.format("范围 %.2f ~ %d", MIN_INTERVAL, MAX_INTERVAL), T.Red)
     end
 end)
 
 local startBtn = Instance.new("TextButton")
-startBtn.Size = UDim2.new(1, 0, 0, 46)
-startBtn.BackgroundColor3 = T.Success
-startBtn.Text = "开始训练"
-startBtn.TextColor3 = Color3.fromRGB(10, 20, 14)
+startBtn.Size = UDim2.new(1, 0, 0, 44)
+startBtn.BackgroundColor3 = T.Green
+startBtn.Text = "▶  开始训练"
+startBtn.TextColor3 = T.BgDeep
 startBtn.Font = T.FB
-startBtn.TextSize = 14
+startBtn.TextSize = 13
 startBtn.AutoButtonColor = false
 startBtn.BorderSizePixel = 0
 startBtn.Parent = trainCard
-corner(startBtn, 12)
+corner(startBtn, 4)
 local startGrad = gradientMulti(startBtn, {
-    {0, Color3.fromRGB(140, 245, 175)},
-    {1, Color3.fromRGB(40, 180, 90)},
+    {0, Color3.fromRGB(0, 255, 180)},
+    {1, Color3.fromRGB(0, 150, 100)},
 }, 90)
+local startStroke = stroke(startBtn, T.Green, 1.5, 0.2)
 
 updateStartBtn = function()
     if isTraining then
-        startBtn.Text = "停止训练"
-        startBtn.TextColor3 = Color3.fromRGB(40, 10, 14)
+        startBtn.Text = "■  停止训练"
+        startBtn.TextColor3 = Color3.fromRGB(40, 5, 15)
         startGrad.Color = ColorSequence.new(
-            Color3.fromRGB(255, 170, 170),
-            Color3.fromRGB(210, 60, 80)
+            Color3.fromRGB(255, 100, 130),
+            Color3.fromRGB(180, 30, 60)
         )
+        startStroke.Color = T.Red
     else
-        startBtn.Text = "开始训练"
-        startBtn.TextColor3 = Color3.fromRGB(10, 20, 14)
+        startBtn.Text = "▶  开始训练"
+        startBtn.TextColor3 = T.BgDeep
         startGrad.Color = ColorSequence.new(
-            Color3.fromRGB(140, 245, 175),
-            Color3.fromRGB(40, 180, 90)
+            Color3.fromRGB(0, 255, 180),
+            Color3.fromRGB(0, 150, 100)
         )
+        startStroke.Color = T.Green
     end
 end
 
 startBtn.MouseEnter:Connect(function() tween(startBtn, { BackgroundTransparency = 0.15 }, 0.15) end)
 startBtn.MouseLeave:Connect(function() tween(startBtn, { BackgroundTransparency = 0 }, 0.15) end)
 
-local autoCard = card(230, 3, T.Purple)
-cardTitle(autoCard, "自动化", T.Purple)
+local autoCard = accordionCard("◆ 自动重生", T.Purple, false)
 
 toggleRow(autoCard, "自动重生", "AutoRebirth")
 toggleRow(autoCard, "反挂机", "AntiAfk")
-toggleRow(autoCard, "自动重置角色", "AutoReset")
+toggleRow(autoCard, "自动重置", "AutoReset")
 toggleRow(autoCard, "通知提示", "Notifications")
 
-local rebirthProgress = Instance.new("TextLabel")
-rebirthProgress.Size = UDim2.new(1, 0, 0, 20)
-rebirthProgress.BackgroundColor3 = T.PanelAlt
-rebirthProgress.BackgroundTransparency = 0.6
-rebirthProgress.Text = "进度 0 / ∞"
-rebirthProgress.TextColor3 = T.Purple
-rebirthProgress.TextXAlignment = Enum.TextXAlignment.Center
-rebirthProgress.Font = T.FB
-rebirthProgress.TextSize = 11
-rebirthProgress.Parent = autoCard
-corner(rebirthProgress, 7)
-stroke(rebirthProgress, T.Purple, 1, 0.6)
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(1, 0, 0, 1)
+divider.BackgroundColor3 = T.Purple
+divider.BackgroundTransparency = 0.7
+divider.BorderSizePixel = 0
+divider.Parent = autoCard
 
-numberInput(autoCard, "重生次数", "AutoRebirthCount", 0, 99999, function(v)
-    if v == 0 then
-        rebirthProgress.Text = string.format("进度 %d / ∞", Config.AutoRebirthDone)
+local titleRow = Instance.new("Frame")
+titleRow.Size = UDim2.new(1, 0, 0, 16)
+titleRow.BackgroundTransparency = 1
+titleRow.Parent = autoCard
+
+local titleTxt = Instance.new("TextLabel")
+titleTxt.Size = UDim2.new(1, 0, 1, 0)
+titleTxt.BackgroundTransparency = 1
+titleTxt.Text = "› 自定义重生次数"
+titleTxt.TextColor3 = T.Purple
+titleTxt.TextXAlignment = Enum.TextXAlignment.Left
+titleTxt.Font = T.FB
+titleTxt.TextSize = 10
+titleTxt.Parent = titleRow
+
+local countRow = Instance.new("Frame")
+countRow.Size = UDim2.new(1, 0, 0, 32)
+countRow.BackgroundTransparency = 1
+countRow.Parent = autoCard
+
+local minusBtn = Instance.new("TextButton")
+minusBtn.Size = UDim2.new(0, 32, 1, 0)
+minusBtn.BackgroundColor3 = T.BgPanel2
+minusBtn.Text = "−"
+minusBtn.TextColor3 = T.Red
+minusBtn.Font = T.FB
+minusBtn.TextSize = 18
+minusBtn.AutoButtonColor = false
+minusBtn.BorderSizePixel = 0
+minusBtn.Parent = countRow
+corner(minusBtn, 3)
+stroke(minusBtn, T.Red, 1, 0.3)
+
+local countBox = Instance.new("TextBox")
+countBox.Size = UDim2.new(1, -76, 1, 0)
+countBox.Position = UDim2.new(0, 36, 0, 0)
+countBox.BackgroundColor3 = T.BgPanel2
+countBox.Text = tostring(Config.AutoRebirthCount)
+countBox.TextColor3 = T.Purple
+countBox.Font = T.FM
+countBox.TextSize = 14
+countBox.ClearTextOnFocus = false
+countBox.BorderSizePixel = 0
+countBox.Parent = countRow
+corner(countBox, 3)
+stroke(countBox, T.Purple, 1.2, 0.3)
+
+local plusBtn = Instance.new("TextButton")
+plusBtn.Size = UDim2.new(0, 32, 1, 0)
+plusBtn.Position = UDim2.new(1, -32, 0, 0)
+plusBtn.BackgroundColor3 = T.BgPanel2
+plusBtn.Text = "+"
+plusBtn.TextColor3 = T.Green
+plusBtn.Font = T.FB
+plusBtn.TextSize = 18
+plusBtn.AutoButtonColor = false
+plusBtn.BorderSizePixel = 0
+plusBtn.Parent = countRow
+corner(plusBtn, 3)
+stroke(plusBtn, T.Green, 1, 0.3)
+
+local function commitCount(n)
+    n = math.clamp(math.floor(tonumber(n) or 0), 0, 99999)
+    Config.AutoRebirthCount = n
+    countBox.Text = tostring(n)
+    saveConfig()
+    if updateRebirthDisplay then updateRebirthDisplay() end
+end
+
+minusBtn.MouseButton1Click:Connect(function()
+    local step = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) and 10 or 1
+    commitCount(Config.AutoRebirthCount - step)
+end)
+
+plusBtn.MouseButton1Click:Connect(function()
+    local step = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) and 10 or 1
+    commitCount(Config.AutoRebirthCount + step)
+end)
+
+countBox.FocusLost:Connect(function()
+    local n = tonumber(countBox.Text)
+    if n and n >= 0 and n <= 99999 then
+        commitCount(n)
     else
-        rebirthProgress.Text = string.format("进度 %d / %d", Config.AutoRebirthDone, v)
+        countBox.Text = tostring(Config.AutoRebirthCount)
+        notify("范围 0 ~ 99999", T.Red)
     end
 end)
 
+minusBtn.MouseEnter:Connect(function() tween(minusBtn, { BackgroundColor3 = T.BgPanelHi }, 0.15) end)
+minusBtn.MouseLeave:Connect(function() tween(minusBtn, { BackgroundColor3 = T.BgPanel2 }, 0.15) end)
+plusBtn.MouseEnter:Connect(function() tween(plusBtn, { BackgroundColor3 = T.BgPanelHi }, 0.15) end)
+plusBtn.MouseLeave:Connect(function() tween(plusBtn, { BackgroundColor3 = T.BgPanel2 }, 0.15) end)
+
+local statsRow = Instance.new("Frame")
+statsRow.Size = UDim2.new(1, 0, 0, 34)
+statsRow.BackgroundColor3 = T.BgPanel2
+statsRow.BackgroundTransparency = 0.4
+statsRow.Parent = autoCard
+corner(statsRow, 3)
+stroke(statsRow, T.Purple, 1, 0.4)
+
+local doneLbl = Instance.new("TextLabel")
+doneLbl.Size = UDim2.new(0.5, 0, 1, 0)
+doneLbl.BackgroundTransparency = 1
+doneLbl.Text = "0"
+doneLbl.TextColor3 = T.Green
+doneLbl.Font = T.FB
+doneLbl.TextSize = 16
+doneLbl.Parent = statsRow
+
+local targetLbl = Instance.new("TextLabel")
+targetLbl.Size = UDim2.new(0.5, 0, 1, 0)
+targetLbl.Position = UDim2.new(0.5, 0, 0, 0)
+targetLbl.BackgroundTransparency = 1
+targetLbl.Text = "∞"
+targetLbl.TextColor3 = T.Purple
+targetLbl.Font = T.FB
+targetLbl.TextSize = 16
+targetLbl.Parent = statsRow
+
+local slash = Instance.new("TextLabel")
+slash.Size = UDim2.new(0, 14, 1, 0)
+slash.Position = UDim2.new(0.5, -7, 0, 0)
+slash.BackgroundTransparency = 1
+slash.Text = "/"
+slash.TextColor3 = T.TextSub
+slash.Font = T.FB
+slash.TextSize = 14
+slash.Parent = statsRow
+
+local barBg = Instance.new("Frame")
+barBg.Size = UDim2.new(1, 0, 0, 6)
+barBg.BackgroundColor3 = T.BgPanel2
+barBg.BorderSizePixel = 0
+barBg.Parent = autoCard
+corner(barBg, 3)
+stroke(barBg, T.Stroke, 1, 0.5)
+
+local barFill = Instance.new("Frame")
+barFill.Size = UDim2.new(0, 0, 1, 0)
+barFill.BackgroundColor3 = T.Green
+barFill.BorderSizePixel = 0
+barFill.Parent = barBg
+corner(barFill, 3)
+gradient(barFill, T.Green, T.Neon, 0)
+
+updateRebirthDisplay = function()
+    doneLbl.Text = tostring(Config.AutoRebirthDone)
+    if Config.AutoRebirthCount == 0 then
+        targetLbl.Text = "∞"
+        targetLbl.TextColor3 = T.Purple
+        barFill.Size = UDim2.new(0, 0, 1, 0)
+        barFill.BackgroundColor3 = T.Purple
+    else
+        targetLbl.Text = tostring(Config.AutoRebirthCount)
+        targetLbl.TextColor3 = T.Purple
+        local pct = math.clamp(Config.AutoRebirthDone / Config.AutoRebirthCount, 0, 1)
+        barFill.Size = UDim2.new(pct, 0, 1, 0)
+        if pct >= 1 then
+            barFill.BackgroundColor3 = T.Green
+        elseif pct >= 0.5 then
+            barFill.BackgroundColor3 = T.Neon
+        else
+            barFill.BackgroundColor3 = T.Purple
+        end
+    end
+end
+updateRebirthDisplay()
+
 local resetRebirthBtn = Instance.new("TextButton")
-resetRebirthBtn.Size = UDim2.new(1, 0, 0, 28)
-resetRebirthBtn.BackgroundColor3 = T.PanelAlt
-resetRebirthBtn.Text = "重置重生计数"
-resetRebirthBtn.TextColor3 = T.Text
+resetRebirthBtn.Size = UDim2.new(1, 0, 0, 26)
+resetRebirthBtn.BackgroundColor3 = T.BgPanel2
+resetRebirthBtn.Text = "⟲  重置计数"
+resetRebirthBtn.TextColor3 = T.Red
 resetRebirthBtn.Font = T.FM
-resetRebirthBtn.TextSize = 12
+resetRebirthBtn.TextSize = 11
 resetRebirthBtn.AutoButtonColor = false
 resetRebirthBtn.BorderSizePixel = 0
 resetRebirthBtn.Parent = autoCard
-corner(resetRebirthBtn, 8)
-stroke(resetRebirthBtn, T.Stroke, 1, 0.4)
+corner(resetRebirthBtn, 3)
+stroke(resetRebirthBtn, T.Red, 1, 0.4)
 
 resetRebirthBtn.MouseEnter:Connect(function()
-    tween(resetRebirthBtn, { BackgroundColor3 = T.PanelHi }, 0.15)
+    tween(resetRebirthBtn, { BackgroundColor3 = T.BgPanelHi }, 0.15)
 end)
 resetRebirthBtn.MouseLeave:Connect(function()
-    tween(resetRebirthBtn, { BackgroundColor3 = T.PanelAlt }, 0.15)
+    tween(resetRebirthBtn, { BackgroundColor3 = T.BgPanel2 }, 0.15)
 end)
 
 resetRebirthBtn.MouseButton1Click:Connect(function()
     Config.AutoRebirthDone = 0
     saveConfig()
-    if Config.AutoRebirthCount == 0 then
-        rebirthProgress.Text = "进度 0 / ∞"
-    else
-        rebirthProgress.Text = string.format("进度 0 / %d", Config.AutoRebirthCount)
-    end
-    notify("已重置重生计数", T.Info)
+    updateRebirthDisplay()
+    notify("计数已重置", T.Neon)
 end)
 
-if Config.AutoRebirthCount == 0 then
-    rebirthProgress.Text = string.format("进度 %d / ∞", Config.AutoRebirthDone)
-else
-    rebirthProgress.Text = string.format("进度 %d / %d", Config.AutoRebirthDone, Config.AutoRebirthCount)
-end
-
-local moveCard = card(230, 4, T.Info)
-cardTitle(moveCard, "移动", T.Info)
+local moveCard = accordionCard("◆ 移动", T.Neon, false)
 
 applyWalkSpeed = function()
     local char = LocalPlayer.Character
@@ -1033,14 +1229,14 @@ toggleRow(moveCard, "飞行模式", "Fly", function(on)
         startFly()
         if IS_TOUCH then FlyControls.Visible = true end
         if IS_TOUCH then
-            notify("飞行已开启，使用屏幕方向键控制", T.Info)
+            notify("飞行开启 — 使用方向键", T.Neon)
         else
-            notify("飞行已开启（空格上升 / 左Ctrl下降）", T.Info)
+            notify("飞行开启 — 空格 / 左Ctrl", T.Neon)
         end
     else
         stopFly()
         FlyControls.Visible = false
-        notify("飞行已关闭", T.Danger)
+        notify("飞行关闭", T.Red)
     end
 end)
 
@@ -1053,50 +1249,16 @@ numberInput(moveCard, "飞行速度", "FlySpeed", 10, 500, function(v)
     flySpeed = v
 end)
 
-local statCard = card(210, 5, T.Pink)
-cardTitle(statCard, "统计", T.Pink)
+local statCard = accordionCard("◆ 统计", T.Yellow, false)
 
-local function statRow(parent, label)
-    local r = Instance.new("Frame")
-    r.Size = UDim2.new(1, 0, 0, 26)
-    r.BackgroundColor3 = T.PanelAlt
-    r.BackgroundTransparency = 0.6
-    r.Parent = parent
-    corner(r, 8)
-    stroke(r, T.Stroke, 1, 0.7)
-
-    local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(0.6, -12, 1, 0)
-    l.Position = UDim2.new(0, 12, 0, 0)
-    l.BackgroundTransparency = 1
-    l.Text = label
-    l.TextColor3 = T.TextDim
-    l.TextXAlignment = Enum.TextXAlignment.Left
-    l.Font = T.FM
-    l.TextSize = 12
-    l.Parent = r
-
-    local v = Instance.new("TextLabel")
-    v.Size = UDim2.new(0.4, -12, 1, 0)
-    v.Position = UDim2.new(0.6, 0, 0, 0)
-    v.BackgroundTransparency = 1
-    v.Text = "0"
-    v.TextColor3 = T.Text
-    v.TextXAlignment = Enum.TextXAlignment.Right
-    v.Font = T.FB
-    v.TextSize = 13
-    v.Parent = r
-    return v
-end
-
-local statSession = statRow(statCard, "本次训练")
-local statTotal = statRow(statCard, "累计训练")
-local statRate = statRow(statCard, "每秒平均")
+local statSession = infoRow(statCard, "本次训练", T.Text)
+local statTotal = infoRow(statCard, "累计训练", T.Text)
+local statRate = infoRow(statCard, "每秒平均", T.Text)
 
 local Bottom = Instance.new("Frame")
-Bottom.Size = UDim2.new(1, 0, 0, 68)
-Bottom.Position = UDim2.new(0, 0, 1, -68)
-Bottom.BackgroundColor3 = T.Panel
+Bottom.Size = UDim2.new(1, 0, 0, 58)
+Bottom.Position = UDim2.new(0, 0, 1, -58)
+Bottom.BackgroundColor3 = T.BgPanel
 Bottom.BackgroundTransparency = 0.1
 Bottom.BorderSizePixel = 0
 Bottom.ZIndex = 3
@@ -1104,18 +1266,18 @@ Bottom.Parent = Main
 
 local bottomLine = Instance.new("Frame")
 bottomLine.Size = UDim2.new(1, 0, 0, 1)
-bottomLine.BackgroundColor3 = T.Accent
-bottomLine.BackgroundTransparency = 0.6
+bottomLine.BackgroundColor3 = T.Neon
+bottomLine.BackgroundTransparency = 0.5
 bottomLine.BorderSizePixel = 0
 bottomLine.ZIndex = 4
 bottomLine.Parent = Bottom
-gradient(bottomLine, T.Accent, T.Purple, 0)
+gradientMulti(bottomLine, {{0, T.Neon}, {0.5, T.Neon2}, {1, T.Neon}}, 0)
 
 local statusDotGlow = Instance.new("Frame")
 statusDotGlow.Size = UDim2.new(0, 16, 0, 16)
-statusDotGlow.Position = UDim2.new(0, 18, 0, 20)
-statusDotGlow.BackgroundColor3 = T.Danger
-statusDotGlow.BackgroundTransparency = 0.7
+statusDotGlow.Position = UDim2.new(0, 14, 0, 14)
+statusDotGlow.BackgroundColor3 = T.Red
+statusDotGlow.BackgroundTransparency = 0.6
 statusDotGlow.BorderSizePixel = 0
 statusDotGlow.ZIndex = 4
 statusDotGlow.Parent = Bottom
@@ -1123,40 +1285,40 @@ corner(statusDotGlow, 8)
 
 local statusDot = Instance.new("Frame")
 statusDot.Size = UDim2.new(0, 8, 0, 8)
-statusDot.Position = UDim2.new(0, 22, 0, 24)
-statusDot.BackgroundColor3 = T.Danger
+statusDot.Position = UDim2.new(0, 18, 0, 18)
+statusDot.BackgroundColor3 = T.Red
 statusDot.BorderSizePixel = 0
 statusDot.ZIndex = 5
 statusDot.Parent = Bottom
 corner(statusDot, 4)
 
 local statusLbl = Instance.new("TextLabel")
-statusLbl.Size = UDim2.new(1, -50, 0, 20)
-statusLbl.Position = UDim2.new(0, 42, 0, 18)
+statusLbl.Size = UDim2.new(1, -50, 0, 16)
+statusLbl.Position = UDim2.new(0, 36, 0, 12)
 statusLbl.BackgroundTransparency = 1
-statusLbl.Text = "空闲"
+statusLbl.Text = "待机中"
 statusLbl.TextColor3 = T.Text
 statusLbl.TextXAlignment = Enum.TextXAlignment.Left
-statusLbl.Font = T.FB
-statusLbl.TextSize = 13
+statusLbl.Font = T.FM
+statusLbl.TextSize = 11
 statusLbl.ZIndex = 5
 statusLbl.Parent = Bottom
 
 local hintLbl = Instance.new("TextLabel")
-hintLbl.Size = UDim2.new(1, -60, 0, 16)
-hintLbl.Position = UDim2.new(0, 42, 0, 40)
+hintLbl.Size = UDim2.new(1, -50, 0, 14)
+hintLbl.Position = UDim2.new(0, 36, 0, 30)
 hintLbl.BackgroundTransparency = 1
-hintLbl.Text = IS_TOUCH and "拖动标题移动 · 触摸方向键飞行" or "拖动标题移动 · 右下角缩放 · ◎ 收缩 · Insert 隐藏 · RShift 开始/停止"
+hintLbl.Text = IS_TOUCH and "// 点击标题折叠" or "// 点击标题折叠 · RShift 开关"
 hintLbl.TextColor3 = T.TextSub
 hintLbl.TextXAlignment = Enum.TextXAlignment.Left
-hintLbl.Font = T.F
-hintLbl.TextSize = 10
+hintLbl.Font = T.FM
+hintLbl.TextSize = 9
 hintLbl.ZIndex = 5
 hintLbl.Parent = Bottom
 
 local ResizeGrip = Instance.new("Frame")
-ResizeGrip.Size = UDim2.new(0, 18, 0, 18)
-ResizeGrip.Position = UDim2.new(1, -22, 1, -22)
+ResizeGrip.Size = UDim2.new(0, 16, 0, 16)
+ResizeGrip.Position = UDim2.new(1, -20, 1, -20)
 ResizeGrip.BackgroundTransparency = 1
 ResizeGrip.ZIndex = 20
 ResizeGrip.Parent = Main
@@ -1164,8 +1326,8 @@ ResizeGrip.Parent = Main
 for i = 1, 3 do
     local dot = Instance.new("Frame")
     dot.Size = UDim2.new(0, 3, 0, 3)
-    dot.Position = UDim2.new(0, 15 - i * 5, 0, 15 - i * 5)
-    dot.BackgroundColor3 = T.Accent
+    dot.Position = UDim2.new(0, 13 - i * 4, 0, 13 - i * 4)
+    dot.BackgroundColor3 = T.Neon
     dot.BorderSizePixel = 0
     dot.Parent = ResizeGrip
     corner(dot, 2)
@@ -1182,9 +1344,9 @@ local BallBtn = Instance.new("TextButton")
 BallBtn.Size = UDim2.new(1, 0, 1, 0)
 BallBtn.BackgroundTransparency = 1
 BallBtn.Text = "力"
-BallBtn.TextColor3 = Color3.fromRGB(30, 20, 0)
+BallBtn.TextColor3 = T.BgDeep
 BallBtn.Font = T.FB
-BallBtn.TextSize = 24
+BallBtn.TextSize = 22
 BallBtn.AutoButtonColor = false
 BallBtn.Visible = false
 BallBtn.ZIndex = 25
@@ -1192,19 +1354,21 @@ BallBtn.Parent = Main
 
 updateStatus = function()
     if isTraining then
-        statusDot.BackgroundColor3 = T.Success
-        statusDotGlow.BackgroundColor3 = T.Success
-        HeaderDot.BackgroundColor3 = T.Success
-        HeaderDotGlow.BackgroundColor3 = T.Success
-        statusLbl.Text = "训练中  ·  " .. (ActionNames[Config.Action] or Config.Action)
-        if isCollapsed then Main.BackgroundColor3 = T.Success end
+        statusDot.BackgroundColor3 = T.Green
+        statusDotGlow.BackgroundColor3 = T.Green
+        HeaderDot.BackgroundColor3 = T.Green
+        HeaderDotGlow.BackgroundColor3 = T.Green
+        statusLbl.Text = "运行中  ·  " .. (ActionNames[Config.Action] or Config.Action)
+        statusLbl.TextColor3 = T.Green
+        if isCollapsed then Main.BackgroundColor3 = T.Green end
     else
-        statusDot.BackgroundColor3 = T.Danger
-        statusDotGlow.BackgroundColor3 = T.Danger
-        HeaderDot.BackgroundColor3 = T.Danger
-        HeaderDotGlow.BackgroundColor3 = T.Danger
-        statusLbl.Text = "空闲"
-        if isCollapsed then Main.BackgroundColor3 = T.Danger end
+        statusDot.BackgroundColor3 = T.Red
+        statusDotGlow.BackgroundColor3 = T.Red
+        HeaderDot.BackgroundColor3 = T.Red
+        HeaderDotGlow.BackgroundColor3 = T.Red
+        statusLbl.Text = "待机中"
+        statusLbl.TextColor3 = T.Text
+        if isCollapsed then Main.BackgroundColor3 = T.Red end
     end
 end
 
@@ -1218,16 +1382,15 @@ collapse = function()
     Content.Visible = false
     Bottom.Visible = false
     ResizeGrip.Visible = false
-    innerHighlight.Visible = false
     mainCorner.CornerRadius = UDim.new(1, 0)
     mainStroke.Transparency = 0.2
     bgGrad.Color = ColorSequence.new(
-        isTraining and T.Success or T.Danger,
-        isTraining and T.SuccessDark or T.DangerDark
+        isTraining and T.Green or T.Red,
+        isTraining and T.GreenDim or T.RedDim
     )
     tween(Main, {
         Size = UDim2.new(0, COLLAPSED, 0, COLLAPSED),
-        BackgroundColor3 = isTraining and T.Success or T.Danger,
+        BackgroundColor3 = isTraining and T.Green or T.Red,
     }, 0.3, Enum.EasingStyle.Back)
     BallBtn.Visible = true
 end
@@ -1235,16 +1398,16 @@ end
 expand = function()
     if not isCollapsed then return end
     isCollapsed = false
-    mainCorner.CornerRadius = UDim.new(0, 18)
-    mainStroke.Transparency = 0.55
+    mainCorner.CornerRadius = UDim.new(0, 6)
+    mainStroke.Transparency = 0.35
     bgGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, T.BG1),
-        ColorSequenceKeypoint.new(0.5, T.BG0),
-        ColorSequenceKeypoint.new(1, T.BG2),
+        ColorSequenceKeypoint.new(0, T.BgPanel),
+        ColorSequenceKeypoint.new(0.5, T.BgDeep),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(6, 12, 20)),
     })
     tween(Main, {
         Size = savedSize or UDim2.new(0, W, 0, H),
-        BackgroundColor3 = T.BG0,
+        BackgroundColor3 = T.BgDeep,
     }, 0.3, Enum.EasingStyle.Back)
     accentBar.Visible = true
     accentGlow.Visible = true
@@ -1252,13 +1415,12 @@ expand = function()
     Content.Visible = true
     Bottom.Visible = true
     ResizeGrip.Visible = true
-    innerHighlight.Visible = true
     BallBtn.Visible = false
 end
 
 startAutoTrain = function()
     if isTraining then return end
-    if not TrainEvent then notify("未找到训练事件", T.Danger) return end
+    if not TrainEvent then notify("未找到训练事件", T.Red) return end
     isTraining = true
     trainCount = 0
     startTime = tick()
@@ -1292,10 +1454,10 @@ end
 startBtn.MouseButton1Click:Connect(function()
     if isTraining then
         stopAutoTrain()
-        notify("已停止训练", T.Danger)
+        notify("训练已停止", T.Red)
     else
         startAutoTrain()
-        if isTraining then notify("已开始自动训练", T.Success) end
+        if isTraining then notify("训练已开始", T.Green) end
     end
     updateStartBtn()
     updateStatus()
@@ -1422,7 +1584,7 @@ task.spawn(function()
         rowStrength.Text = fmt(cur)
         rowSession.Text = (gain >= 0 and "+" or "") .. fmt(gain)
         rowBefore.Text = fmt(sessionStartStrength)
-        rowSession.TextColor3 = gain > 0 and T.Success or (gain < 0 and T.Danger or T.Text)
+        rowSession.TextColor3 = gain > 0 and T.Green or (gain < 0 and T.Red or T.Text)
 
         if trainCount > 0 and gain > 0 then
             rowPerRep.Text = string.format("%.2f", gain / trainCount)
@@ -1479,7 +1641,7 @@ task.spawn(function()
                 if Config.AutoRebirth then
                     Config.AutoRebirth = false
                     saveConfig()
-                    notify("已达成重生目标 " .. target .. " 次", T.Success)
+                    notify("已达成目标 " .. target .. " 次", T.Green)
                 end
             else
                 pcall(function() RebirthEvent:FireServer("Start") end)
@@ -1487,11 +1649,7 @@ task.spawn(function()
                 pcall(function() RebirthEvent:FireServer("Update") end)
                 Config.AutoRebirthDone = done + 1
                 saveConfig()
-                if target == 0 then
-                    rebirthProgress.Text = string.format("进度 %d / ∞", Config.AutoRebirthDone)
-                else
-                    rebirthProgress.Text = string.format("进度 %d / %d", Config.AutoRebirthDone, target)
-                end
+                if updateRebirthDisplay then updateRebirthDisplay() end
             end
         end
     end
@@ -1519,10 +1677,10 @@ track(UserInputService.InputBegan:Connect(function(input, processed)
     elseif input.KeyCode == Enum.KeyCode.RightShift then
         if isTraining then
             stopAutoTrain()
-            notify("已停止训练", T.Danger)
+            notify("训练已停止", T.Red)
         else
             startAutoTrain()
-            if isTraining then notify("已开始自动训练", T.Success) end
+            if isTraining then notify("训练已开始", T.Green) end
         end
         updateStartBtn()
         updateStatus()
@@ -1551,4 +1709,4 @@ if Config.MinimizeOnStart then
     task.defer(collapse)
 end
 
-notify("力量之冠 v1.0 已加载", T.Accent)
+notify("力量之冠 v1.0 — 已启动", T.Neon)
